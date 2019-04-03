@@ -29,7 +29,7 @@ func main() {
 		log.Fatalf("%+v", err)
 	}
 
-	rows, err := conn.Query("select cn from OU=Users,OU=Corporate AD,DC=company,DC=corp where (objectCategory=user)")
+	rows, err := conn.Query("select givenName as "First Name" from OU=Users,OU=Corporate AD,DC=company,DC=corp where (objectCategory=user)")
 	if err != nil {
 		log.Fatalf("%+v", err)
 	}

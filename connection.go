@@ -20,8 +20,9 @@ var (
 	_ driver.Queryer = &Conn{}
 
 	// regexs
-	rWithWhere    = regexp.MustCompile(`^select\W(.+)\Wfrom\W(.+)\Wwhere\W(.+)$`)
-	rWithoutWhere = regexp.MustCompile(`^select\W(.+)\Wfrom\W(.+)$`)
+	rWithWhere      = regexp.MustCompile(`^select\W(.+)\Wfrom\W(.+)\Wwhere\W(.+)$`)
+	rWithoutWhere   = regexp.MustCompile(`^select\W(.+)\Wfrom\W(.+)$`)
+	rFieldWithAlias = regexp.MustCompile(`^(\w+)\sas\s[\"]?([^"]+)[\"]?$`)
 
 	// errors
 	errNoPrepared     = fmt.Errorf("no support for prepared statements")
@@ -81,12 +82,22 @@ func (c *Conn) Query(query string, args []driver.Value) (rows driver.Rows, err e
 		filter = "(objectClass=*)"
 	}
 
-	// clean-up attribute names
+	// get list of attributes to search on, figure out any aliases
+	// and create column definitions to be used during result processing
 	attrs := make([]string, 0, len(fields))
-	for _, attr := range fields {
-		f := strings.TrimSpace(attr)
+	cols := make([]column, 0, len(fields))
+	for _, field := range fields {
+		f := strings.TrimSpace(field)
 		if f != "" {
-			attrs = append(attrs, f)
+			fparts := rFieldWithAlias.FindStringSubmatch(f)
+
+			if len(fparts) > 2 {
+				cols = append(cols, column{attributeName: fparts[1], alias: fparts[2]})
+				attrs = append(attrs, fparts[1])
+			} else {
+				cols = append(cols, column{attributeName: f, alias: f})
+				attrs = append(attrs, f)
+			}
 		}
 	}
 
@@ -107,10 +118,11 @@ func (c *Conn) Query(query string, args []driver.Value) (rows driver.Rows, err e
 	}
 
 	rows = &Rows{
-		rc: c,
-		rs: resultSet{
+		connection: c,
+		results: resultSet{
 			results: sr,
 		},
+		columns: cols,
 	}
 
 	return

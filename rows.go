@@ -9,6 +9,11 @@ import (
 	"gopkg.in/ldap.v2"
 )
 
+type column struct {
+	attributeName string
+	alias         string
+}
+
 type resultSet struct {
 	results *ldap.SearchResult
 	num     int
@@ -16,8 +21,9 @@ type resultSet struct {
 
 // Rows structure to track results
 type Rows struct {
-	rc *Conn
-	rs resultSet
+	connection *Conn
+	results    resultSet
+	columns    []column
 }
 
 var (
@@ -27,17 +33,14 @@ var (
 
 // Columns returns the columns in the result set
 func (rows *Rows) Columns() (data []string) {
-	if rows.rs == (resultSet{}) {
+	if rows.results == (resultSet{}) {
 		return
 	}
 
-	// create slice of all attribute names on first entry
-	e := rows.rs.results.Entries[0]
-	attrs := make([]string, 0, len(e.Attributes))
-
-	// append attribute names
-	for _, attr := range e.Attributes {
-		attrs = append(attrs, attr.Name)
+	// return aliases
+	attrs := make([]string, 0, len(rows.columns))
+	for _, col := range rows.columns {
+		attrs = append(attrs, col.alias)
 	}
 
 	data = attrs
@@ -46,20 +49,20 @@ func (rows *Rows) Columns() (data []string) {
 
 // Next navigates to next row in resultset
 func (rows *Rows) Next(dest []driver.Value) (err error) {
-	if rows.rs == (resultSet{}) {
+	if rows.results == (resultSet{}) {
 		err = errClosed
 		return
 	}
 
-	if rows.rs.num == len(rows.rs.results.Entries) {
+	if rows.results.num == len(rows.results.results.Entries) {
 		err = io.EOF
 		return
 	}
 
 	// put attribute values from current entry
-	e := rows.rs.results.Entries[rows.rs.num]
-	for i, attr := range e.Attributes {
-		values := e.GetAttributeValues(attr.Name)
+	e := rows.results.results.Entries[rows.results.num]
+	for i, attr := range rows.columns {
+		values := e.GetAttributeValues(attr.attributeName)
 		if len(values) == 1 {
 			dest[i] = values[0]
 		} else {
@@ -68,18 +71,18 @@ func (rows *Rows) Next(dest []driver.Value) (err error) {
 		}
 	}
 
-	rows.rs.num++
+	rows.results.num++
 	return
 }
 
 // Close closes the rows
 func (rows *Rows) Close() (err error) {
-	if rows.rs == (resultSet{}) {
+	if rows.results == (resultSet{}) {
 		err = errClosed
 		return
 	}
-	rows.rc = nil
-	rows.rs = resultSet{}
+	rows.connection = nil
+	rows.results = resultSet{}
 
 	return
 }

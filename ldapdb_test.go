@@ -88,6 +88,8 @@ func TestGetResults(t *testing.T) {
 		t.Fatalf("no columns returned")
 	}
 
+	//log.Println(cols)
+
 	// go thru this just to validate pointers, etc.
 	vals := make([]interface{}, len(cols))
 	for i := range vals {
