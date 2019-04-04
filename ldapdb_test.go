@@ -79,6 +79,7 @@ func TestGetResults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("conn.Query error: %+v", err)
 	}
+	defer rows.Close()
 
 	cols, err := rows.Columns()
 	if err != nil {

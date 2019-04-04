@@ -119,10 +119,8 @@ func (c *Conn) Query(query string, args []driver.Value) (rows driver.Rows, err e
 
 	rows = &Rows{
 		connection: c,
-		results: resultSet{
-			results: sr,
-		},
-		columns: cols,
+		results:    sr,
+		columns:    cols,
 	}
 
 	return

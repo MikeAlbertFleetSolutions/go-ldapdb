@@ -14,16 +14,12 @@ type column struct {
 	alias         string
 }
 
-type resultSet struct {
-	results *ldap.SearchResult
-	num     int
-}
-
 // Rows structure to track results
 type Rows struct {
 	connection *Conn
-	results    resultSet
 	columns    []column
+	results    *ldap.SearchResult
+	currentRow int
 }
 
 var (
@@ -33,7 +29,7 @@ var (
 
 // Columns returns the columns in the result set
 func (rows *Rows) Columns() (data []string) {
-	if rows.results == (resultSet{}) {
+	if rows.results == nil {
 		return
 	}
 
@@ -49,18 +45,18 @@ func (rows *Rows) Columns() (data []string) {
 
 // Next navigates to next row in resultset
 func (rows *Rows) Next(dest []driver.Value) (err error) {
-	if rows.results == (resultSet{}) {
+	if rows.results == nil {
 		err = errClosed
 		return
 	}
 
-	if rows.results.num == len(rows.results.results.Entries) {
+	if rows.currentRow == len(rows.results.Entries) {
 		err = io.EOF
 		return
 	}
 
 	// put attribute values from current entry
-	e := rows.results.results.Entries[rows.results.num]
+	e := rows.results.Entries[rows.currentRow]
 	for i, attr := range rows.columns {
 		values := e.GetAttributeValues(attr.attributeName)
 		if len(values) == 1 {
@@ -71,18 +67,18 @@ func (rows *Rows) Next(dest []driver.Value) (err error) {
 		}
 	}
 
-	rows.results.num++
+	rows.currentRow++
 	return
 }
 
 // Close closes the rows
 func (rows *Rows) Close() (err error) {
-	if rows.results == (resultSet{}) {
+	if rows.results == nil {
 		err = errClosed
 		return
 	}
 	rows.connection = nil
-	rows.results = resultSet{}
+	rows.results = nil
 
 	return
 }

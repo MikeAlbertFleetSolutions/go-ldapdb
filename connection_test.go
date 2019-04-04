@@ -57,6 +57,10 @@ func Test_conn_Query(t *testing.T) {
 				t.Errorf("conn.Query() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+			if err == nil {
+				defer gotRows.Close()
+			}
+
 			if (gotRows != nil) != tt.wantRows {
 				t.Errorf("conn.Query() = %v, want %v", gotRows, tt.wantRows)
 			}
