@@ -1,4 +1,4 @@
-module github.com/MikeAlbertFleetSolutions/go-ldap
+module github.com/MikeAlbertFleetSolutions/go-ldapdb
 
 go 1.18
 
