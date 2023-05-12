@@ -28,9 +28,9 @@ var (
 )
 
 // Columns returns the columns in the result set
-func (rows *Rows) Columns() (data []string) {
+func (rows *Rows) Columns() []string {
 	if rows.results == nil {
-		return
+		return nil
 	}
 
 	// return aliases
@@ -39,20 +39,17 @@ func (rows *Rows) Columns() (data []string) {
 		attrs = append(attrs, col.alias)
 	}
 
-	data = attrs
-	return
+	return attrs
 }
 
 // Next navigates to next row in resultset
-func (rows *Rows) Next(dest []driver.Value) (err error) {
+func (rows *Rows) Next(dest []driver.Value) error {
 	if rows.results == nil {
-		err = errClosed
-		return
+		return errClosed
 	}
 
 	if rows.currentRow == len(rows.results.Entries) {
-		err = io.EOF
-		return
+		return io.EOF
 	}
 
 	// put attribute values from current entry
@@ -68,17 +65,16 @@ func (rows *Rows) Next(dest []driver.Value) (err error) {
 	}
 
 	rows.currentRow++
-	return
+	return nil
 }
 
 // Close closes the rows
-func (rows *Rows) Close() (err error) {
+func (rows *Rows) Close() error {
 	if rows.results == nil {
-		err = errClosed
-		return
+		return errClosed
 	}
 	rows.connection = nil
 	rows.results = nil
 
-	return
+	return nil
 }

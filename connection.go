@@ -12,12 +12,12 @@ import (
 
 // Conn is a ldap connection
 type Conn struct {
-	client *ldap.Conn
+	pingquery *string
+	client    *ldap.Conn
 }
 
 var (
-	_ driver.Conn    = &Conn{}
-	_ driver.Queryer = &Conn{}
+	_ driver.Conn = &Conn{}
 
 	// regexs
 	rWithWhere      = regexp.MustCompile(`^select\W(.+)\Wfrom\W(.+)\Wwhere\W(.+)$`)
@@ -31,33 +31,34 @@ var (
 )
 
 // Begin not supported but satisfies the interface requirements
-func (c *Conn) Begin() (tx driver.Tx, err error) {
-	err = errNoTransactions
-	return
+func (c *Conn) Begin() (driver.Tx, error) {
+	return nil, errNoTransactions
 }
 
 // Prepare not supported but satisfies the interface requirements
-func (c *Conn) Prepare(query string) (stmt driver.Stmt, err error) {
-	err = errNoPrepared
-	return
+func (c *Conn) Prepare(query string) (driver.Stmt, error) {
+	return nil, errNoPrepared
 }
 
 // Close closes the ldap connection
-func (c *Conn) Close() (err error) {
+func (c *Conn) Close() error {
 	c.client.Close()
-	return
+	return nil
 }
 
-// Ping NOP but satisfies the interface requirements
-func (c *Conn) Ping(ctx context.Context) (err error) {
-	return
+// Ping tests the ldap connection
+func (c *Conn) Ping(ctx context.Context) error {
+	if c.pingquery != nil {
+		_, err := c.Query(*c.pingquery, nil)
+		return err
+	}
+	return nil
 }
 
 // Query carries out the ldap search
-func (c *Conn) Query(query string, args []driver.Value) (rows driver.Rows, err error) {
+func (c *Conn) Query(query string, args []driver.Value) (driver.Rows, error) {
 	if len(args) > 0 {
-		err = errNoPrepared
-		return
+		return nil, errNoPrepared
 	}
 
 	//	extract fields, base and filter criteria
@@ -68,8 +69,7 @@ func (c *Conn) Query(query string, args []driver.Value) (rows driver.Rows, err e
 	}
 
 	if len(matches) < 3 {
-		err = errBadQuery
-		return
+		return nil, errBadQuery
 	}
 	fields := strings.Split(matches[1], ",")
 	base := matches[2]
@@ -111,17 +111,16 @@ func (c *Conn) Query(query string, args []driver.Value) (rows driver.Rows, err e
 	)
 
 	// do search
-	var sr *ldap.SearchResult
-	sr, err = c.client.Search(request)
+	sr, err := c.client.Search(request)
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	rows = &Rows{
+	rows := &Rows{
 		connection: c,
 		results:    sr,
 		columns:    cols,
 	}
 
-	return
+	return rows, nil
 }

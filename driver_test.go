@@ -17,9 +17,16 @@ func TestDriver_Open(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			"Valid connection parameters",
+			"Valid connection parameters without parameters",
 			ldapdriver{},
 			args{fmt.Sprintf("%s/%s@%s", config.LdapConnection.Username, config.LdapConnection.Password, config.LdapConnection.ServerPort)},
+			true,
+			false,
+		},
+		{
+			"Valid connection parameters with parameters",
+			ldapdriver{},
+			args{fmt.Sprintf("%s/%s@%s?pingquery=%s", config.LdapConnection.Username, config.LdapConnection.Password, config.LdapConnection.ServerPort, config.LdapConnection.PingQuery)},
 			true,
 			false,
 		},

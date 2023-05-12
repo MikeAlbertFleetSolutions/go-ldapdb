@@ -18,6 +18,7 @@ type configuration struct {
 		ServerPort string
 		Username   string
 		Password   string
+		PingQuery  string
 	}
 	TestConnQuery struct {
 		ValidQuery          string
@@ -43,36 +44,40 @@ func init() {
 	}
 }
 
-func getTestLdapClient() (client *ldap.Conn, err error) {
+func getTestLdapClient() (*ldap.Conn, error) {
 	// connect to ldap server
-	client, err = ldap.Dial("tcp", config.LdapConnection.ServerPort)
+	client, err := ldap.Dial("tcp", config.LdapConnection.ServerPort)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// TLS upgrade, #nosec G402
 	err = client.StartTLS(&tls.Config{InsecureSkipVerify: true})
 	if err != nil {
-		client = nil
-		return
+		return nil, err
 	}
 
 	// authenticate to ldap server
 	err = client.Bind(config.LdapConnection.Username, config.LdapConnection.Password)
 	if err != nil {
-		client = nil
-		return
+		return nil, err
 	}
 
-	return
+	return client, nil
 }
 
 func TestGetResults(t *testing.T) {
-	connString := fmt.Sprintf("%s/%s@%s", config.LdapConnection.Username, config.LdapConnection.Password, config.LdapConnection.ServerPort)
+	connString := fmt.Sprintf("%s/%s@%s?pingquery=%s", config.LdapConnection.Username, config.LdapConnection.Password, config.LdapConnection.ServerPort, config.LdapConnection.PingQuery)
 
 	conn, err := sql.Open("ldapdb", connString)
 	if err != nil {
 		t.Fatalf("sql.Open error: %+v", err)
+	}
+
+	err = conn.Ping()
+	if err != nil {
+		t.Errorf("conn.Ping() error: %+v", err)
+		return
 	}
 
 	rows, err := conn.Query(config.TestConnQuery.ValidQuery)

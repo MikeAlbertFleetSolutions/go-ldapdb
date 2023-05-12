@@ -52,6 +52,7 @@ func Test_conn_Query(t *testing.T) {
 			c := &Conn{
 				client: l,
 			}
+
 			gotRows, err := c.Query(tt.args.query, tt.args.args)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("conn.Query() error = %v, wantErr %v", err, tt.wantErr)
